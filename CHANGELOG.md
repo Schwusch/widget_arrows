@@ -1,3 +1,15 @@
-## [0.1.0]
+## 0.1.3
 
-- initial release.
+- Remove `pedantic` since it's impossible to resolve a reasonable version, which in turn makes `pub sad.
+
+## 0.1.2
+
+- Make `pub` even happier
+
+## 0.1.1
+
+- Make `pub` happy
+
+## 0.1.0
+
+- Initial release.
