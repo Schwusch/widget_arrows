@@ -1,3 +1,7 @@
+## 0.1.4
+
+- Fix dispose of listeners bug
+
 ## 0.1.3
 
 - Remove `pedantic` since it's impossible to resolve a reasonable version, which in turn makes `pub sad.

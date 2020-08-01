@@ -16,64 +16,76 @@ class ArrowContainer extends StatefulWidget {
   _ArrowContainerState createState() => _ArrowContainerState();
 }
 
-class _ArrowContainerState extends State<ArrowContainer> {
-  final _elements = <String, ArrowNotification>{};
-  ValueNotifier<Map<String, ArrowNotification>> _notifier;
-
-  _ArrowContainerState() {
-    _notifier = ValueNotifier(_elements);
+abstract class StatePatched<T extends StatefulWidget> extends State<T> {
+  void disposePatched() {
+    super.dispose();
   }
+}
+
+class _ArrowContainerState extends StatePatched<ArrowContainer>
+    with ChangeNotifier {
+  final _elements = <String, _ArrowNotification>{};
 
   @override
   void dispose() {
-    _notifier.dispose();
     super.dispose();
+    disposePatched();
   }
 
   @override
   Widget build(BuildContext context) =>
-      NotificationListener<ArrowDisposeNotification>(
-        onNotification: (disposeMe) {
-          _notifier.value = Map.from(_elements..remove(disposeMe.id));
+      NotificationListener<_ArrowNotification>(
+        onNotification: (notification) {
+          notification.dispose = () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _elements.remove(notification.id);
+                notifyListeners();
+              }
+            });
+          };
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _elements[notification.id] = notification;
+            notifyListeners();
+          });
           return true;
         },
-        child: NotificationListener<ArrowNotification>(
-          onNotification: (notification) {
-            _notifier.value =
-                Map.from(_elements..[notification.id] = notification);
-            return true;
-          },
-          child: Stack(
-            children: [
-              widget.child,
-              IgnorePointer(
-                child: ValueListenableBuilder<Map<String, ArrowNotification>>(
-                  valueListenable: _notifier,
-                  builder: (_, elements, __) => CustomPaint(
-                    painter: ArrowPainter(elements, Directionality.of(context)),
-                    child: Container(),
-                  ),
-                ),
+        child: Stack(
+          children: [
+            widget.child,
+            IgnorePointer(
+              child: CustomPaint(
+                foregroundPainter:
+                    _ArrowPainter(_elements, Directionality.of(context), this),
+                child: Container(),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
 }
 
-class ArrowPainter extends CustomPainter {
-  final Map<String, ArrowNotification> _elements;
+class _ArrowPainter extends CustomPainter {
+  final Map<String, _ArrowNotification> _elements;
   final TextDirection _direction;
 
-  ArrowPainter(this._elements, this._direction);
+  _ArrowPainter(this._elements, this._direction, Listenable repaint)
+      : super(repaint: repaint);
 
   @override
   void paint(Canvas canvas, Size size) => _elements.values.forEach((elem) {
         if (!elem.show) return; // don't show/paint
-        if (elem.targetId == null &&
-            elem.id == null &&
-            _elements[elem.targetId] == null) {
+        if (elem.id == null) {
+          print('arrow id is null, will not paint');
+          return;
+        }
+        if (elem.targetId == null) {
           return; // Unable to draw
+        }
+
+        if (_elements[elem.targetId] == null) {
+          print('cannot find target arrow element with id "${elem.targetId}"');
+          return;
         }
 
         final start = elem.key.currentContext?.findRenderObject() as RenderBox;
@@ -82,7 +94,11 @@ class ArrowPainter extends CustomPainter {
             ?.currentContext
             ?.findRenderObject() as RenderBox;
 
-        if (start == null || end == null) return; // Unable to draw
+        if (start == null || end == null || !start.attached || !end.attached) {
+          print(
+              'one of "${elem.id}" or "${elem.targetId}" arrow elements render boxes is either not found or attached ');
+          return; // Unable to draw
+        }
 
         final startGlobalOffset = start.localToGlobal(Offset.zero);
         final endGlobalOffset = end.localToGlobal(Offset.zero);
@@ -119,73 +135,61 @@ class ArrowPainter extends CustomPainter {
           ..moveTo(arrow.sx, arrow.sy)
           ..quadraticBezierTo(arrow.cx, arrow.cy, arrow.ex, arrow.ey);
 
-        makeArrowTip(
-          path: path,
-          isDoubleSided: elem.isDoubleSided,
-        );
+        final lastPathMetric = path.computeMetrics().last;
+        final firstPathMetric = path.computeMetrics().first;
+
+        var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length);
+        var adjustmentAngle = 0.0;
+
+        final tipLength = 15.0;
+        final tipAngleStart = pi * 0.2;
+
+        final angleStart = pi - tipAngleStart;
+        final originalPosition = tan.position;
+
+        if (lastPathMetric.length > 10) {
+          final tanBefore =
+              lastPathMetric.getTangentForOffset(lastPathMetric.length - 5);
+          adjustmentAngle =
+              _getAngleBetweenVectors(tan.vector, tanBefore.vector);
+        }
+
+        Offset tipVector;
+
+        tipVector =
+            _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
+        path.moveTo(tan.position.dx, tan.position.dy);
+        path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+        tipVector = _rotateVector(tan.vector, -angleStart - adjustmentAngle) *
+            tipLength;
+        path.moveTo(tan.position.dx, tan.position.dy);
+        path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+        if (elem.isDoubleSided) {
+          tan = firstPathMetric.getTangentForOffset(0);
+          if (firstPathMetric.length > 10) {
+            final tanBefore = firstPathMetric.getTangentForOffset(5);
+            adjustmentAngle =
+                _getAngleBetweenVectors(tan.vector, tanBefore.vector);
+          }
+
+          tipVector = _rotateVector(-tan.vector, angleStart - adjustmentAngle) *
+              tipLength;
+          path.moveTo(tan.position.dx, tan.position.dy);
+          path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+          tipVector =
+              _rotateVector(-tan.vector, -angleStart - adjustmentAngle) *
+                  tipLength;
+          path.moveTo(tan.position.dx, tan.position.dy);
+          path.relativeLineTo(tipVector.dx, tipVector.dy);
+        }
+
+        path.moveTo(originalPosition.dx, originalPosition.dy);
 
         canvas.drawPath(path, paint);
       });
-
-  static void makeArrowTip({
-    @required Path path,
-    double tipLength = 15,
-    double tipAngleStart = pi * 0.2,
-    bool isDoubleSided = false,
-    bool isAdjusted = true,
-  }) {
-    PathMetric lastPathMetric;
-    PathMetric firstPathMetric;
-    Offset tipVector;
-    Tangent tan;
-    var adjustmentAngle = 0.0;
-
-    final angleStart = pi - tipAngleStart;
-    lastPathMetric = path.computeMetrics().last;
-    if (isDoubleSided) {
-      firstPathMetric = path.computeMetrics().first;
-    }
-
-    tan = lastPathMetric.getTangentForOffset(lastPathMetric.length);
-
-    final originalPosition = tan.position;
-
-    if (isAdjusted && lastPathMetric.length > 10) {
-      final tanBefore =
-          lastPathMetric.getTangentForOffset(lastPathMetric.length - 5);
-      adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
-    }
-
-    tipVector =
-        _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
-    path.moveTo(tan.position.dx, tan.position.dy);
-    path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-    tipVector =
-        _rotateVector(tan.vector, -angleStart - adjustmentAngle) * tipLength;
-    path.moveTo(tan.position.dx, tan.position.dy);
-    path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-    if (isDoubleSided) {
-      tan = firstPathMetric.getTangentForOffset(0);
-      if (isAdjusted && firstPathMetric.length > 10) {
-        final tanBefore = firstPathMetric.getTangentForOffset(5);
-        adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
-      }
-
-      tipVector =
-          _rotateVector(-tan.vector, angleStart - adjustmentAngle) * tipLength;
-      path.moveTo(tan.position.dx, tan.position.dy);
-      path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-      tipVector =
-          _rotateVector(-tan.vector, -angleStart - adjustmentAngle) * tipLength;
-      path.moveTo(tan.position.dx, tan.position.dy);
-      path.relativeLineTo(tipVector.dx, tipVector.dy);
-    }
-
-    path.moveTo(originalPosition.dx, originalPosition.dy);
-  }
 
   static Offset _rotateVector(Offset vector, double angle) => Offset(
         cos(angle) * vector.dx - sin(angle) * vector.dy,
@@ -202,7 +206,7 @@ class ArrowPainter extends CustomPainter {
           .clamp(-1.0, 1.0));
 
   @override
-  bool shouldRepaint(ArrowPainter oldDelegate) =>
+  bool shouldRepaint(_ArrowPainter oldDelegate) =>
       !mapEquals(oldDelegate._elements, _elements) ||
       _direction != oldDelegate._direction;
 }
@@ -288,13 +292,22 @@ class ArrowElement extends StatefulWidget {
 }
 
 class _ArrowElementState extends State<ArrowElement> {
-  final GlobalObjectKey _key;
+  GlobalObjectKey _key;
+  _ArrowNotification _latestNotification;
 
-  _ArrowElementState(String id) : _key = GlobalObjectKey(id);
+  _ArrowElementState(String id) {
+    _key = GlobalObjectKey(id + shortHash(this));
+  }
+
+  @override
+  void dispose() {
+    _latestNotification?.dispose?.call();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    ArrowNotification(
+    _latestNotification = _ArrowNotification(
       show: widget.show,
       id: widget.id,
       targetId: widget.targetId,
@@ -320,13 +333,7 @@ class _ArrowElementState extends State<ArrowElement> {
   }
 }
 
-class ArrowDisposeNotification extends Notification {
-  final String id;
-
-  ArrowDisposeNotification(this.id);
-}
-
-class ArrowNotification extends Notification {
+class _ArrowNotification extends Notification {
   final bool show;
   final GlobalKey key;
   final String id;
@@ -344,8 +351,9 @@ class ArrowNotification extends Notification {
   final double padEnd;
   final bool flip;
   final bool straights;
+  Function dispose;
 
-  const ArrowNotification({
+  _ArrowNotification({
     this.show,
     this.key,
     this.id,
@@ -368,7 +376,7 @@ class ArrowNotification extends Notification {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ArrowNotification &&
+      other is _ArrowNotification &&
           show == other.show &&
           runtimeType == other.runtimeType &&
           key == other.key &&
