@@ -24,7 +24,7 @@ abstract class StatePatched<T extends StatefulWidget> extends State<T> {
 
 class _ArrowContainerState extends StatePatched<ArrowContainer>
     with ChangeNotifier {
-  final _elements = <String, _ArrowNotification>{};
+  final _elements = <String, _ArrowElementState>{};
 
   @override
   void dispose() {
@@ -33,40 +33,38 @@ class _ArrowContainerState extends StatePatched<ArrowContainer>
   }
 
   @override
-  Widget build(BuildContext context) =>
-      NotificationListener<_ArrowNotification>(
-        onNotification: (notification) {
-          notification.dispose = () {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _elements.remove(notification.id);
-                notifyListeners();
-              }
-            });
-          };
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _elements[notification.id] = notification;
-            notifyListeners();
-          });
-          return true;
-        },
-        child: Stack(
-          children: [
-            widget.child,
-            IgnorePointer(
-              child: CustomPaint(
-                foregroundPainter:
-                    _ArrowPainter(_elements, Directionality.of(context), this),
-                child: Container(),
-              ),
+  Widget build(BuildContext context) => Stack(
+        children: [
+          widget.child,
+          IgnorePointer(
+            child: CustomPaint(
+              foregroundPainter:
+                  _ArrowPainter(_elements, Directionality.of(context), this),
+              child: Container(),
             ),
-          ],
-        ),
+          ),
+        ],
       );
+
+  void addArrow(_ArrowElementState arrow) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _elements[arrow.widget.id] = arrow;
+      notifyListeners();
+    });
+  }
+
+  void removeArrow(String id) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _elements.remove(id);
+        notifyListeners();
+      }
+    });
+  }
 }
 
 class _ArrowPainter extends CustomPainter {
-  final Map<String, _ArrowNotification> _elements;
+  final Map<String, _ArrowElementState> _elements;
   final TextDirection _direction;
 
   _ArrowPainter(this._elements, this._direction, Listenable repaint)
@@ -74,62 +72,65 @@ class _ArrowPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) => _elements.values.forEach((elem) {
-        if (!elem.show) return; // don't show/paint
-        if (elem.id == null) {
+        final widget = elem.widget;
+
+        if (!widget.show) return; // don't show/paint
+        if (widget.id == null) {
           print('arrow id is null, will not paint');
           return;
         }
-        if (elem.targetId == null) {
+        if (widget.targetId == null) {
           return; // Unable to draw
         }
 
-        if (_elements[elem.targetId] == null) {
-          print('cannot find target arrow element with id "${elem.targetId}"');
+        if (_elements[widget.targetId] == null) {
+          print(
+              'cannot find target arrow element with id "${widget.targetId}"');
           return;
         }
 
-        final start = elem.key.currentContext?.findRenderObject() as RenderBox;
-        final end = _elements[elem.targetId]
-            ?.key
-            ?.currentContext
-            ?.findRenderObject() as RenderBox;
+        final start = elem.context.findRenderObject() as RenderBox;
+        final end = _elements[widget.targetId]?.context?.findRenderObject()
+            as RenderBox;
 
         if (start == null || end == null || !start.attached || !end.attached) {
           print(
-              'one of "${elem.id}" or "${elem.targetId}" arrow elements render boxes is either not found or attached ');
+              'one of "${widget.id}" or "${widget.targetId}" arrow elements render boxes is either not found or attached ');
           return; // Unable to draw
         }
 
         final startGlobalOffset = start.localToGlobal(Offset.zero);
         final endGlobalOffset = end.localToGlobal(Offset.zero);
 
-        final startPosition = elem.sourceAnchor.resolve(_direction).withinRect(
-            Rect.fromLTWH(startGlobalOffset.dx, startGlobalOffset.dy,
-                start.size.width, start.size.height));
-        final endPosition = elem.targetAnchor.resolve(_direction).withinRect(
-            Rect.fromLTWH(endGlobalOffset.dx, endGlobalOffset.dy,
+        final startPosition = widget.sourceAnchor
+            .resolve(_direction)
+            .withinRect(Rect.fromLTWH(startGlobalOffset.dx,
+                startGlobalOffset.dy, start.size.width, start.size.height));
+        final endPosition = widget.targetAnchor
+            .resolve(_direction)
+            .withinRect(Rect.fromLTWH(endGlobalOffset.dx, endGlobalOffset.dy,
                 end.size.width, end.size.height));
 
         final paint = Paint()
-          ..color = elem.color
+          ..color = widget.color
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = elem.width;
+          ..strokeWidth = widget.width;
 
         final arrow = getArrow(
           startPosition.dx,
           startPosition.dy,
           endPosition.dx,
           endPosition.dy,
-          bow: elem.bow,
-          stretch: elem.stretch,
-          stretchMin: elem.stretchMin,
-          stretchMax: elem.stretchMax,
-          padStart: elem.padStart,
-          padEnd: elem.padEnd,
-          straights: elem.straights,
-          flip: elem.flip,
+          bow: widget.bow,
+          stretch: widget.stretch,
+          stretchMin: widget.stretchMin,
+          stretchMax: widget.stretchMax,
+          padStart: widget.padStart,
+          padEnd: widget.padEnd,
+          straights: widget.straights,
+          flip: widget.flip,
         );
         final path = Path()
           ..moveTo(arrow.sx, arrow.sy)
@@ -166,7 +167,7 @@ class _ArrowPainter extends CustomPainter {
         path.moveTo(tan.position.dx, tan.position.dy);
         path.relativeLineTo(tipVector.dx, tipVector.dy);
 
-        if (elem.isDoubleSided) {
+        if (widget.doubleSided) {
           tan = firstPathMetric.getTangentForOffset(0);
           if (firstPathMetric.length > 10) {
             final tanBefore = firstPathMetric.getTangentForOffset(5);
@@ -288,131 +289,26 @@ class ArrowElement extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _ArrowElementState createState() => _ArrowElementState(id);
+  _ArrowElementState createState() => _ArrowElementState();
 }
 
 class _ArrowElementState extends State<ArrowElement> {
-  GlobalObjectKey _key;
-  _ArrowNotification _latestNotification;
 
-  _ArrowElementState(String id) {
-    _key = GlobalObjectKey(id + shortHash(this));
+  _ArrowContainerState _container;
+
+  @override
+  void initState() {
+    _container = context.findAncestorStateOfType<_ArrowContainerState>()
+      ..addArrow(this);
+    super.initState();
   }
 
   @override
   void dispose() {
-    _latestNotification?.dispose?.call();
+    _container.removeArrow(widget.id);
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    _latestNotification = _ArrowNotification(
-      show: widget.show,
-      id: widget.id,
-      targetId: widget.targetId,
-      sourceAnchor: widget.sourceAnchor,
-      targetAnchor: widget.targetAnchor,
-      key: _key,
-      isDoubleSided: widget.doubleSided,
-      color: widget.color,
-      width: widget.width,
-      bow: widget.bow,
-      stretchMin: widget.stretchMin,
-      stretchMax: widget.stretchMax,
-      stretch: widget.stretch,
-      padStart: widget.padStart,
-      padEnd: widget.padEnd,
-      flip: widget.flip,
-      straights: widget.straights,
-    )..dispatch(context);
-    return Container(
-      key: _key,
-      child: widget.child,
-    );
-  }
-}
-
-class _ArrowNotification extends Notification {
-  final bool show;
-  final GlobalKey key;
-  final String id;
-  final String targetId;
-  final AlignmentGeometry sourceAnchor;
-  final AlignmentGeometry targetAnchor;
-  final bool isDoubleSided;
-  final Color color;
-  final double width;
-  final double bow;
-  final double stretchMin;
-  final double stretchMax;
-  final double stretch;
-  final double padStart;
-  final double padEnd;
-  final bool flip;
-  final bool straights;
-  Function dispose;
-
-  _ArrowNotification({
-    this.show,
-    this.key,
-    this.id,
-    this.targetId,
-    this.sourceAnchor,
-    this.targetAnchor,
-    this.isDoubleSided,
-    this.color,
-    this.width,
-    this.bow,
-    this.stretchMin,
-    this.stretchMax,
-    this.stretch,
-    this.padStart,
-    this.padEnd,
-    this.flip,
-    this.straights,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _ArrowNotification &&
-          show == other.show &&
-          runtimeType == other.runtimeType &&
-          key == other.key &&
-          id == other.id &&
-          targetId == other.targetId &&
-          sourceAnchor == other.sourceAnchor &&
-          targetAnchor == other.targetAnchor &&
-          isDoubleSided == other.isDoubleSided &&
-          color == other.color &&
-          width == other.width &&
-          bow == other.bow &&
-          stretchMin == other.stretchMin &&
-          stretchMax == other.stretchMax &&
-          stretch == other.stretch &&
-          padStart == other.padStart &&
-          padEnd == other.padEnd &&
-          flip == other.flip &&
-          straights == other.straights;
-
-  @override
-  int get hashCode =>
-      show.hashCode ^
-      key.hashCode ^
-      id.hashCode ^
-      targetId.hashCode ^
-      sourceAnchor.hashCode ^
-      targetAnchor.hashCode ^
-      isDoubleSided.hashCode ^
-      color.hashCode ^
-      width.hashCode ^
-      bow.hashCode ^
-      stretchMin.hashCode ^
-      stretchMax.hashCode ^
-      stretch.hashCode ^
-      padStart.hashCode ^
-      padEnd.hashCode ^
-      flip.hashCode ^
-      straights.hashCode;
+  Widget build(BuildContext context) => widget.child;
 }
