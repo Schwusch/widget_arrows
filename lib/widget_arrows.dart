@@ -141,8 +141,8 @@ class _ArrowPainter extends CustomPainter {
         var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length);
         var adjustmentAngle = 0.0;
 
-        final tipLength = 15.0;
-        final tipAngleStart = pi * 0.2;
+        final tipLength = widget.tipLength;
+        final tipAngleStart = widget.tipAngleOutwards;
 
         final angleStart = pi - tipAngleStart;
         final originalPosition = tan.position;
@@ -239,6 +239,12 @@ class ArrowElement extends StatefulWidget {
   /// Arrow width
   final double width;
 
+  /// Length of arrow tip
+  final double tipLength;
+
+  /// Outwards angle of arrow tip, in radians
+  final double tipAngleOutwards;
+
   /// A value representing the natural bow of the arrow.
   /// At 0, all lines will be straight.
   final double bow;
@@ -277,6 +283,8 @@ class ArrowElement extends StatefulWidget {
     this.doubleSided = false,
     this.color = Colors.blue,
     this.width = 3,
+    this.tipLength = 15,
+    this.tipAngleOutwards = pi * 0.2,
     this.bow = 0.2,
     this.stretchMin = 0,
     this.stretchMax = 420,

@@ -1,3 +1,7 @@
+## 0.1.6
+
+- Added `tipLength` and `tipAngleOutwards` parameters to `ArrowElement`
+
 ## 0.1.5
 
 - Use `findAncestorStateOfType` instead of notifications
