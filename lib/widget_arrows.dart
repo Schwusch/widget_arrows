@@ -106,9 +106,8 @@ class _ArrowPainter extends CustomPainter {
             .resolve(_direction)
             .withinRect(Rect.fromLTWH(startGlobalOffset.dx,
                 startGlobalOffset.dy, start.size.width, start.size.height));
-        final endPosition = widget.targetAnchor
-            .resolve(_direction)
-            .withinRect(Rect.fromLTWH(endGlobalOffset.dx, endGlobalOffset.dy,
+        final endPosition = widget.targetAnchor.resolve(_direction).withinRect(
+            Rect.fromLTWH(endGlobalOffset.dx, endGlobalOffset.dy,
                 end.size.width, end.size.height));
 
         final paint = Paint()
@@ -293,7 +292,6 @@ class ArrowElement extends StatefulWidget {
 }
 
 class _ArrowElementState extends State<ArrowElement> {
-
   _ArrowContainerState _container;
 
   @override
