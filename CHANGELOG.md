@@ -1,3 +1,7 @@
+## 0.1.7
+
+- Add `arcDirection` parameter to `ArrowElement`
+
 ## 0.1.6
 
 - Added `tipLength` and `tipAngleOutwards` parameters to `ArrowElement`

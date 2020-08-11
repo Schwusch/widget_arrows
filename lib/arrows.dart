@@ -1,5 +1,7 @@
 import 'dart:math';
 
+enum ArcDirection { Left, Right, Auto }
+
 Arrow getArrow(
   double x0,
   double y0,
@@ -13,6 +15,7 @@ Arrow getArrow(
   double padEnd = 0,
   bool flip = false,
   bool straights = true,
+  ArcDirection arcDirection = ArcDirection.Auto,
 }) {
   final angle = getAngle(x0, y0, x1, y1);
   final dist = getDistance(x0, y0, x1, y1);
@@ -49,10 +52,18 @@ Arrow getArrow(
     return Arrow(px0, py0, mx, my, px1, py1);
   }
 
-  // ⤜⤏ Arrow is an arc!
+  final downWards = y0 < y1;
 
-  // Is the arc clockwise or counterclockwise?
-  final rot = (getSector(angle) % 2 == 0 ? 1 : -1) * (flip ? -1 : 1);
+  // ⤜⤏ Arrow is an arc!
+  int rot;
+  if (arcDirection == ArcDirection.Auto) {
+    // Is the arc clockwise or counterclockwise?
+    rot = (getSector(angle) % 2 == 0 ? 1 : -1) * (flip ? -1 : 1);
+  } else if (arcDirection == ArcDirection.Left) {
+    rot = downWards ? -1 : 1;
+  } else {
+    rot = downWards ? 1 : -1;
+  }
 
   // Calculate how much the line should "bow" away from center
   final arc =

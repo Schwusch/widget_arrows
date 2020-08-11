@@ -130,6 +130,7 @@ class _ArrowPainter extends CustomPainter {
           padEnd: widget.padEnd,
           straights: widget.straights,
           flip: widget.flip,
+          arcDirection: widget.arcDirection,
         );
         final path = Path()
           ..moveTo(arrow.sx, arrow.sy)
@@ -267,10 +268,14 @@ class ArrowElement extends StatefulWidget {
   final double padEnd;
 
   /// Whether to reflect the arrow's bow angle.
+  /// Only used if [arcRotation] is [ArcDirection.Auto]
   final bool flip;
 
   /// Whether to use straight lines at 45 degree angles.
   final bool straights;
+
+  /// If arrow is not straight, which direction the arc should follow
+  final ArcDirection arcDirection;
 
   const ArrowElement({
     Key key,
@@ -293,6 +298,7 @@ class ArrowElement extends StatefulWidget {
     this.padEnd = 0,
     this.flip = false,
     this.straights = true,
+    this.arcDirection = ArcDirection.Auto,
   }) : super(key: key);
 
   @override
