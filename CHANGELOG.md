@@ -1,3 +1,7 @@
+## 0.1.8
+
+- Add ability to target multiple ArrowElements from a single source (Contribution from Keith Robertson [@latesr])
+
 ## 0.1.7
 
 - Add `arcDirection` parameter to `ArrowElement`
