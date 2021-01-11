@@ -71,31 +71,39 @@ class _ArrowPainter extends CustomPainter {
       : super(repaint: repaint);
 
   @override
-  void paint(Canvas canvas, Size size) => _elements.values.forEach((elem) {
-        final widget = elem.widget;
+  void paint(Canvas canvas, Size size) {
+    _elements.values.forEach((elem) {
+      final widget = elem.widget;
 
-        if (!widget.show) return; // don't show/paint
-        if (widget.id == null) {
-          print('arrow id is null, will not paint');
-          return;
-        }
-        if (widget.targetId == null) {
-          return; // Unable to draw
-        }
+      if (!widget.show) return; // don't show/paint
+      if (widget.id == null) {
+        print('arrow id is null, will not paint');
+        return;
+      }
+      if (widget.targetId == null && widget.targetIds == null) {
+        return; // No target for arrow
+      }
 
-        if (_elements[widget.targetId] == null) {
-          print(
-              'cannot find target arrow element with id "${widget.targetId}"');
+      List<String> targets;
+      if (widget.targetIds == null) {
+        targets = [widget.targetId];
+      } else {
+        targets = widget.targetIds;
+      }
+
+      targets.forEach((targetId) {
+        if (_elements[targetId] == null) {
+          print('cannot find target arrow element with id "${targetId}"');
           return;
         }
 
         final start = elem.context.findRenderObject() as RenderBox;
-        final end = _elements[widget.targetId]?.context?.findRenderObject()
-            as RenderBox;
+        final end =
+            _elements[targetId]?.context?.findRenderObject() as RenderBox;
 
         if (start == null || end == null || !start.attached || !end.attached) {
           print(
-              'one of "${widget.id}" or "${widget.targetId}" arrow elements render boxes is either not found or attached ');
+              'one of "${widget.id}" or "${targetId}" arrow elements render boxes is either not found or attached ');
           return; // Unable to draw
         }
 
@@ -109,13 +117,6 @@ class _ArrowPainter extends CustomPainter {
         final endPosition = widget.targetAnchor.resolve(_direction).withinRect(
             Rect.fromLTWH(endGlobalOffset.dx, endGlobalOffset.dy,
                 end.size.width, end.size.height));
-
-        final paint = Paint()
-          ..color = widget.color
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = widget.width;
 
         final arrow = getArrow(
           startPosition.dx,
@@ -132,65 +133,76 @@ class _ArrowPainter extends CustomPainter {
           flip: widget.flip,
           arcDirection: widget.arcDirection,
         );
-        final path = Path()
-          ..moveTo(arrow.sx, arrow.sy)
-          ..quadraticBezierTo(arrow.cx, arrow.cy, arrow.ex, arrow.ey);
 
-        final lastPathMetric = path.computeMetrics().last;
-        final firstPathMetric = path.computeMetrics().first;
-
-        var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length);
-        var adjustmentAngle = 0.0;
-
-        final tipLength = widget.tipLength;
-        final tipAngleStart = widget.tipAngleOutwards;
-
-        final angleStart = pi - tipAngleStart;
-        final originalPosition = tan.position;
-
-        if (lastPathMetric.length > 10) {
-          final tanBefore =
-              lastPathMetric.getTangentForOffset(lastPathMetric.length - 5);
-          adjustmentAngle =
-              _getAngleBetweenVectors(tan.vector, tanBefore.vector);
-        }
-
-        Offset tipVector;
-
-        tipVector =
-            _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
-        path.moveTo(tan.position.dx, tan.position.dy);
-        path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-        tipVector = _rotateVector(tan.vector, -angleStart - adjustmentAngle) *
-            tipLength;
-        path.moveTo(tan.position.dx, tan.position.dy);
-        path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-        if (widget.doubleSided) {
-          tan = firstPathMetric.getTangentForOffset(0);
-          if (firstPathMetric.length > 10) {
-            final tanBefore = firstPathMetric.getTangentForOffset(5);
-            adjustmentAngle =
-                _getAngleBetweenVectors(tan.vector, tanBefore.vector);
-          }
-
-          tipVector = _rotateVector(-tan.vector, angleStart - adjustmentAngle) *
-              tipLength;
-          path.moveTo(tan.position.dx, tan.position.dy);
-          path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-          tipVector =
-              _rotateVector(-tan.vector, -angleStart - adjustmentAngle) *
-                  tipLength;
-          path.moveTo(tan.position.dx, tan.position.dy);
-          path.relativeLineTo(tipVector.dx, tipVector.dy);
-        }
-
-        path.moveTo(originalPosition.dx, originalPosition.dy);
+        final path = _createPath(arrow, widget);
+        final paint = Paint()
+          ..color = widget.color
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = widget.width;
 
         canvas.drawPath(path, paint);
       });
+    });
+  }
+
+  Path _createPath(Arrow arrow, ArrowElement widget) {
+    final path = Path()
+      ..moveTo(arrow.sx, arrow.sy)
+      ..quadraticBezierTo(arrow.cx, arrow.cy, arrow.ex, arrow.ey);
+
+    final lastPathMetric = path.computeMetrics().last;
+    final firstPathMetric = path.computeMetrics().first;
+
+    var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length);
+    var adjustmentAngle = 0.0;
+
+    final tipLength = widget.tipLength;
+    final tipAngleStart = widget.tipAngleOutwards;
+
+    final angleStart = pi - tipAngleStart;
+    final originalPosition = tan.position;
+
+    if (lastPathMetric.length > 10) {
+      final tanBefore =
+          lastPathMetric.getTangentForOffset(lastPathMetric.length - 5);
+      adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
+    }
+
+    Offset tipVector;
+
+    tipVector =
+        _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
+    path.moveTo(tan.position.dx, tan.position.dy);
+    path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+    tipVector =
+        _rotateVector(tan.vector, -angleStart - adjustmentAngle) * tipLength;
+    path.moveTo(tan.position.dx, tan.position.dy);
+    path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+    if (widget.doubleSided) {
+      tan = firstPathMetric.getTangentForOffset(0);
+      if (firstPathMetric.length > 10) {
+        final tanBefore = firstPathMetric.getTangentForOffset(5);
+        adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
+      }
+
+      tipVector =
+          _rotateVector(-tan.vector, angleStart - adjustmentAngle) * tipLength;
+      path.moveTo(tan.position.dx, tan.position.dy);
+      path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+      tipVector =
+          _rotateVector(-tan.vector, -angleStart - adjustmentAngle) * tipLength;
+      path.moveTo(tan.position.dx, tan.position.dy);
+      path.relativeLineTo(tipVector.dx, tipVector.dy);
+    }
+
+    path.moveTo(originalPosition.dx, originalPosition.dy);
+    return path;
+  }
 
   static Offset _rotateVector(Offset vector, double angle) => Offset(
         cos(angle) * vector.dx - sin(angle) * vector.dy,
@@ -221,6 +233,9 @@ class ArrowElement extends StatefulWidget {
 
   /// The ID of the [ArrowElement] that will be drawn to
   final String targetId;
+
+  /// A List of IDs of [ArrowElement] that will be drawn to
+  final List<String> targetIds;
 
   /// Where on the source Widget the arrow should start
   final AlignmentGeometry sourceAnchor;
@@ -282,6 +297,7 @@ class ArrowElement extends StatefulWidget {
     @required this.id,
     @required this.child,
     this.targetId,
+    this.targetIds,
     this.show = true,
     this.sourceAnchor = Alignment.centerLeft,
     this.targetAnchor = Alignment.centerLeft,
@@ -299,7 +315,8 @@ class ArrowElement extends StatefulWidget {
     this.flip = false,
     this.straights = true,
     this.arcDirection = ArcDirection.Auto,
-  }) : super(key: key);
+  })  : assert(targetId == null || targetIds == null),
+        super(key: key);
 
   @override
   _ArrowElementState createState() => _ArrowElementState();

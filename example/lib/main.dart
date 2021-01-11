@@ -46,7 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: ArrowElement(
                     show: showArrows,
                     id: 'text',
-                    targetId: 'fab',
+                    targetIds: ['fab', 'title'],
                     sourceAnchor: Alignment.bottomCenter,
                     color: Colors.green,
                     child: Text('Arrows and stuff'),
