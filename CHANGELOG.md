@@ -1,3 +1,7 @@
+## 0.2.0-nullsafety.0
+
+- Migrate to null-safe Dart
+
 ## 0.1.8
 
 - Add ability to target multiple ArrowElements from a single source (Contribution from Keith Robertson [@latesr])

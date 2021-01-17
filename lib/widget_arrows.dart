@@ -89,7 +89,7 @@ class _ArrowPainter extends CustomPainter {
 
       targets.forEach((targetId) {
         if (_elements[targetId] == null) {
-          print('cannot find target arrow element with id "${targetId}"');
+          print('cannot find target arrow element with id "$targetId"');
           return;
         }
 
@@ -99,7 +99,7 @@ class _ArrowPainter extends CustomPainter {
 
         if (!start.attached || !end.attached) {
           print(
-              'one of "${widget.id}" or "${targetId}" arrow elements render boxes is either not found or attached ');
+              'one of "${widget.id}" or "$targetId" arrow elements render boxes is either not found or attached ');
           return; // Unable to draw
         }
 
