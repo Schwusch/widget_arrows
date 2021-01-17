@@ -10,7 +10,7 @@ import 'package:widget_arrows/arrows.dart';
 class ArrowContainer extends StatefulWidget {
   final Widget child;
 
-  const ArrowContainer({Key key, this.child}) : super(key: key);
+  const ArrowContainer({Key? key, required this.child}) : super(key: key);
 
   @override
   _ArrowContainerState createState() => _ArrowContainerState();
@@ -47,14 +47,14 @@ class _ArrowContainerState extends StatePatched<ArrowContainer>
       );
 
   void addArrow(_ArrowElementState arrow) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
       _elements[arrow.widget.id] = arrow;
       notifyListeners();
     });
   }
 
   void removeArrow(String id) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
       if (mounted) {
         _elements.remove(id);
         notifyListeners();
@@ -76,19 +76,15 @@ class _ArrowPainter extends CustomPainter {
       final widget = elem.widget;
 
       if (!widget.show) return; // don't show/paint
-      if (widget.id == null) {
-        print('arrow id is null, will not paint');
-        return;
-      }
       if (widget.targetId == null && widget.targetIds == null) {
         return; // No target for arrow
       }
 
       List<String> targets;
       if (widget.targetIds == null) {
-        targets = [widget.targetId];
+        targets = [widget.targetId!];
       } else {
-        targets = widget.targetIds;
+        targets = widget.targetIds!;
       }
 
       targets.forEach((targetId) {
@@ -99,9 +95,9 @@ class _ArrowPainter extends CustomPainter {
 
         final start = elem.context.findRenderObject() as RenderBox;
         final end =
-            _elements[targetId]?.context?.findRenderObject() as RenderBox;
+            _elements[targetId]?.context.findRenderObject() as RenderBox;
 
-        if (start == null || end == null || !start.attached || !end.attached) {
+        if (!start.attached || !end.attached) {
           print(
               'one of "${widget.id}" or "${targetId}" arrow elements render boxes is either not found or attached ');
           return; // Unable to draw
@@ -155,7 +151,7 @@ class _ArrowPainter extends CustomPainter {
     final lastPathMetric = path.computeMetrics().last;
     final firstPathMetric = path.computeMetrics().first;
 
-    var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length);
+    var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length)!;
     var adjustmentAngle = 0.0;
 
     final tipLength = widget.tipLength;
@@ -166,7 +162,7 @@ class _ArrowPainter extends CustomPainter {
 
     if (lastPathMetric.length > 10) {
       final tanBefore =
-          lastPathMetric.getTangentForOffset(lastPathMetric.length - 5);
+          lastPathMetric.getTangentForOffset(lastPathMetric.length - 5)!;
       adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
     }
 
@@ -183,9 +179,9 @@ class _ArrowPainter extends CustomPainter {
     path.relativeLineTo(tipVector.dx, tipVector.dy);
 
     if (widget.doubleSided) {
-      tan = firstPathMetric.getTangentForOffset(0);
+      tan = firstPathMetric.getTangentForOffset(0)!;
       if (firstPathMetric.length > 10) {
-        final tanBefore = firstPathMetric.getTangentForOffset(5);
+        final tanBefore = firstPathMetric.getTangentForOffset(5)!;
         adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
       }
 
@@ -232,10 +228,10 @@ class ArrowElement extends StatefulWidget {
   final String id;
 
   /// The ID of the [ArrowElement] that will be drawn to
-  final String targetId;
+  final String? targetId;
 
   /// A List of IDs of [ArrowElement] that will be drawn to
-  final List<String> targetIds;
+  final List<String>? targetIds;
 
   /// Where on the source Widget the arrow should start
   final AlignmentGeometry sourceAnchor;
@@ -293,9 +289,9 @@ class ArrowElement extends StatefulWidget {
   final ArcDirection arcDirection;
 
   const ArrowElement({
-    Key key,
-    @required this.id,
-    @required this.child,
+    Key? key,
+    required this.id,
+    required this.child,
     this.targetId,
     this.targetIds,
     this.show = true,
@@ -323,11 +319,11 @@ class ArrowElement extends StatefulWidget {
 }
 
 class _ArrowElementState extends State<ArrowElement> {
-  _ArrowContainerState _container;
+  late final _ArrowContainerState _container;
 
   @override
   void initState() {
-    _container = context.findAncestorStateOfType<_ArrowContainerState>()
+    _container = context.findAncestorStateOfType<_ArrowContainerState>()!
       ..addArrow(this);
     super.initState();
   }
