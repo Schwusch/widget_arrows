@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:widget_arrows/widget_arrows.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   @override
@@ -13,7 +11,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key}) : super(key: key);
+  MyHomePage({Key? key}) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -40,7 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Column(
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: <Widget>[
+              children: [
                 Align(
                   alignment: Alignment.centerLeft,
                   child: ArrowElement(
