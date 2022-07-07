@@ -47,14 +47,14 @@ class _ArrowContainerState extends StatePatched<ArrowContainer>
       );
 
   void addArrow(_ArrowElementState arrow) {
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _elements[arrow.widget.id] = arrow;
       notifyListeners();
     });
   }
 
   void removeArrow(String id) {
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _elements.remove(id);
         notifyListeners();
