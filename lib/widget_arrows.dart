@@ -1,8 +1,6 @@
 library widget_arrows;
 
 import 'dart:math';
-import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:widget_arrows/arrows.dart';
@@ -103,8 +101,17 @@ class _ArrowPainter extends CustomPainter {
           return; // Unable to draw
         }
 
-        final startGlobalOffset = start.localToGlobal(Offset.zero);
-        final endGlobalOffset = end.localToGlobal(Offset.zero);
+        final containerRenderObject =
+            elem._container.context.findRenderObject();
+
+        final startGlobalOffset = start.localToGlobal(
+          Offset.zero,
+          ancestor: containerRenderObject,
+        );
+        final endGlobalOffset = end.localToGlobal(
+          Offset.zero,
+          ancestor: containerRenderObject,
+        );
 
         final startPosition = widget.sourceAnchor
             .resolve(_direction)

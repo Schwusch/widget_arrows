@@ -1,3 +1,6 @@
+## 0.4.0
+- Fixes misplaced arrows
+
 ## 0.3.0
 - Fixes error "Warning: Operand of null-aware operation '!' has type 'WidgetsBinding' which excludes null." when in flutter 3.0
 ## 0.2.0-nullsafety.0
