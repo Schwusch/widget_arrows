@@ -8,6 +8,7 @@ import 'arrows.dart';
 
 class ArrowContainer extends StatefulWidget {
   final Widget child;
+
   /// [listenables] could be [ScrollController] and alike, in order for
   /// the arrows to repaint when moving in a scrollable widget.
   final List<Listenable> listenables;
@@ -57,20 +58,17 @@ class ArrowContainerState extends StatePatched<ArrowContainer>
 
   void addArrow(ArrowElementState arrow) {
     _elements[arrow.widget.id] = arrow;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
+    notifyListeners();
   }
 
   void removeArrow(ArrowElementState arrow) {
     if (_elements[arrow.widget.id] == arrow) {
       _elements.remove(arrow.widget.id);
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        notifyListeners();
-      }
-    });
+
+    if (mounted) {
+      notifyListeners();
+    }
   }
 }
 

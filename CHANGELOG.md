@@ -1,3 +1,9 @@
+## 0.5.2
+- Do not trigger an unnecessary redraw
+
+## 0.5.1
+- Formatting to make pub happy
+
 ## 0.5.0
 - Add argument to pass a list of `Listenable`, in order to redraw on e.g. scroll.
 - Bug fixes
