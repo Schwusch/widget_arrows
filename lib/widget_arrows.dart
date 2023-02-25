@@ -3,15 +3,23 @@ library widget_arrows;
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:widget_arrows/arrows.dart';
+
+import 'arrows.dart';
 
 class ArrowContainer extends StatefulWidget {
   final Widget child;
+  /// [listenables] could be [ScrollController] and alike, in order for
+  /// the arrows to repaint when moving in a scrollable widget.
+  final List<Listenable> listenables;
 
-  const ArrowContainer({Key? key, required this.child}) : super(key: key);
+  const ArrowContainer({
+    Key? key,
+    required this.child,
+    this.listenables = const [],
+  }) : super(key: key);
 
   @override
-  _ArrowContainerState createState() => _ArrowContainerState();
+  ArrowContainerState createState() => ArrowContainerState();
 }
 
 abstract class StatePatched<T extends StatefulWidget> extends State<T> {
@@ -20,9 +28,9 @@ abstract class StatePatched<T extends StatefulWidget> extends State<T> {
   }
 }
 
-class _ArrowContainerState extends StatePatched<ArrowContainer>
+class ArrowContainerState extends StatePatched<ArrowContainer>
     with ChangeNotifier {
-  final _elements = <String, _ArrowElementState>{};
+  final _elements = <String, ArrowElementState>{};
 
   @override
   void dispose() {
@@ -36,25 +44,30 @@ class _ArrowContainerState extends StatePatched<ArrowContainer>
           widget.child,
           IgnorePointer(
             child: CustomPaint(
-              foregroundPainter:
-                  _ArrowPainter(_elements, Directionality.of(context), this),
+              foregroundPainter: _ArrowPainter(
+                _elements,
+                Directionality.of(context),
+                [this, ...widget.listenables],
+              ),
               child: Container(),
             ),
           ),
         ],
       );
 
-  void addArrow(_ArrowElementState arrow) {
+  void addArrow(ArrowElementState arrow) {
+    _elements[arrow.widget.id] = arrow;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _elements[arrow.widget.id] = arrow;
       notifyListeners();
     });
   }
 
-  void removeArrow(String id) {
+  void removeArrow(ArrowElementState arrow) {
+    if (_elements[arrow.widget.id] == arrow) {
+      _elements.remove(arrow.widget.id);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _elements.remove(id);
         notifyListeners();
       }
     });
@@ -62,20 +75,20 @@ class _ArrowContainerState extends StatePatched<ArrowContainer>
 }
 
 class _ArrowPainter extends CustomPainter {
-  final Map<String, _ArrowElementState> _elements;
+  final Map<String, ArrowElementState> _elements;
   final TextDirection _direction;
 
-  _ArrowPainter(this._elements, this._direction, Listenable repaint)
-      : super(repaint: repaint);
+  _ArrowPainter(this._elements, this._direction, List<Listenable> repaint)
+      : super(repaint: Listenable.merge(repaint));
 
   @override
   void paint(Canvas canvas, Size size) {
-    _elements.values.forEach((elem) {
+    for (final elem in _elements.values) {
       final widget = elem.widget;
 
-      if (!widget.show) return; // don't show/paint
+      if (!widget.show) continue; // don't show/paint
       if (widget.targetId == null && widget.targetIds == null) {
-        return; // No target for arrow
+        continue; // No target for arrow
       }
 
       List<String> targets;
@@ -85,24 +98,23 @@ class _ArrowPainter extends CustomPainter {
         targets = widget.targetIds!;
       }
 
-      targets.forEach((targetId) {
+      for (final targetId in targets) {
         if (_elements[targetId] == null) {
-          print('cannot find target arrow element with id "$targetId"');
-          return;
+          continue;
         }
+
+        if (!elem.mounted || _elements[targetId]?.mounted != true) continue;
 
         final start = elem.context.findRenderObject() as RenderBox;
         final end =
             _elements[targetId]?.context.findRenderObject() as RenderBox;
 
         if (!start.attached || !end.attached) {
-          print(
-              'one of "${widget.id}" or "$targetId" arrow elements render boxes is either not found or attached ');
-          return; // Unable to draw
+          continue; // Unable to draw
         }
 
         final containerRenderObject =
-            elem._container.context.findRenderObject();
+            elem._container?.context.findRenderObject();
 
         final startGlobalOffset = start.localToGlobal(
           Offset.zero,
@@ -146,8 +158,8 @@ class _ArrowPainter extends CustomPainter {
           ..strokeWidth = widget.width;
 
         canvas.drawPath(path, paint);
-      });
-    });
+      }
+    }
   }
 
   Path _createPath(Arrow arrow, ArrowElement widget) {
@@ -155,8 +167,10 @@ class _ArrowPainter extends CustomPainter {
       ..moveTo(arrow.sx, arrow.sy)
       ..quadraticBezierTo(arrow.cx, arrow.cy, arrow.ex, arrow.ey);
 
-    final lastPathMetric = path.computeMetrics().last;
-    final firstPathMetric = path.computeMetrics().first;
+    final metrics = path.computeMetrics().toList();
+
+    final lastPathMetric = metrics.last;
+    final firstPathMetric = metrics.first;
 
     var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length)!;
     var adjustmentAngle = 0.0;
@@ -322,23 +336,33 @@ class ArrowElement extends StatefulWidget {
         super(key: key);
 
   @override
-  _ArrowElementState createState() => _ArrowElementState();
+  ArrowElementState createState() => ArrowElementState();
 }
 
-class _ArrowElementState extends State<ArrowElement> {
-  late final _ArrowContainerState _container;
+class ArrowElementState extends State<ArrowElement> {
+  ArrowContainerState? _container;
 
   @override
   void initState() {
-    _container = context.findAncestorStateOfType<_ArrowContainerState>()!
-      ..addArrow(this);
     super.initState();
+    findContainerAndAddOneself();
   }
 
   @override
-  void dispose() {
-    _container.removeArrow(widget.id);
-    super.dispose();
+  void didUpdateWidget(ArrowElement oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    findContainerAndAddOneself();
+  }
+
+  void findContainerAndAddOneself() {
+    _container = context.findAncestorStateOfType<ArrowContainerState>()
+      ?..addArrow(this);
+  }
+
+  @override
+  void deactivate() {
+    _container?.removeArrow(this);
+    super.deactivate();
   }
 
   @override

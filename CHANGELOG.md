@@ -1,3 +1,7 @@
+## 0.5.0
+- Add argument to pass a list of `Listenable`, in order to redraw on e.g. scroll.
+- Bug fixes
+
 ## 0.4.0
 - Fixes misplaced arrows
 
