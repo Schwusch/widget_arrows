@@ -148,75 +148,83 @@ class _ArrowPainter extends CustomPainter {
         );
 
         final path = _createPath(arrow, widget);
-        final paint = Paint()
-          ..color = widget.color
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = widget.width;
 
-        canvas.drawPath(path, paint);
+        if (path != null) {
+          final paint = Paint()
+            ..color = widget.color
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..strokeWidth = widget.width;
+
+          canvas.drawPath(path, paint);
+        }
       }
     }
   }
 
-  Path _createPath(Arrow arrow, ArrowElement widget) {
+  Path? _createPath(Arrow arrow, ArrowElement widget) {
     final path = Path()
       ..moveTo(arrow.sx, arrow.sy)
       ..quadraticBezierTo(arrow.cx, arrow.cy, arrow.ex, arrow.ey);
 
     final metrics = path.computeMetrics().toList();
 
-    final lastPathMetric = metrics.last;
-    final firstPathMetric = metrics.first;
+    if (metrics.isNotEmpty) {
+      final lastPathMetric = metrics.last;
+      final firstPathMetric = metrics.first;
 
-    var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length)!;
-    var adjustmentAngle = 0.0;
+      var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length)!;
+      var adjustmentAngle = 0.0;
 
-    final tipLength = widget.tipLength;
-    final tipAngleStart = widget.tipAngleOutwards;
+      final tipLength = widget.tipLength;
+      final tipAngleStart = widget.tipAngleOutwards;
 
-    final angleStart = pi - tipAngleStart;
-    final originalPosition = tan.position;
+      final angleStart = pi - tipAngleStart;
+      final originalPosition = tan.position;
 
-    if (lastPathMetric.length > 10) {
-      final tanBefore =
-          lastPathMetric.getTangentForOffset(lastPathMetric.length - 5)!;
-      adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
-    }
-
-    Offset tipVector;
-
-    tipVector =
-        _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
-    path.moveTo(tan.position.dx, tan.position.dy);
-    path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-    tipVector =
-        _rotateVector(tan.vector, -angleStart - adjustmentAngle) * tipLength;
-    path.moveTo(tan.position.dx, tan.position.dy);
-    path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-    if (widget.doubleSided) {
-      tan = firstPathMetric.getTangentForOffset(0)!;
-      if (firstPathMetric.length > 10) {
-        final tanBefore = firstPathMetric.getTangentForOffset(5)!;
+      if (lastPathMetric.length > 10) {
+        final tanBefore =
+            lastPathMetric.getTangentForOffset(lastPathMetric.length - 5)!;
         adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
       }
 
+      Offset tipVector;
+
       tipVector =
-          _rotateVector(-tan.vector, angleStart - adjustmentAngle) * tipLength;
+          _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
       path.moveTo(tan.position.dx, tan.position.dy);
       path.relativeLineTo(tipVector.dx, tipVector.dy);
 
       tipVector =
-          _rotateVector(-tan.vector, -angleStart - adjustmentAngle) * tipLength;
+          _rotateVector(tan.vector, -angleStart - adjustmentAngle) * tipLength;
       path.moveTo(tan.position.dx, tan.position.dy);
       path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+      if (widget.doubleSided) {
+        tan = firstPathMetric.getTangentForOffset(0)!;
+        if (firstPathMetric.length > 10) {
+          final tanBefore = firstPathMetric.getTangentForOffset(5)!;
+          adjustmentAngle =
+              _getAngleBetweenVectors(tan.vector, tanBefore.vector);
+        }
+
+        tipVector = _rotateVector(-tan.vector, angleStart - adjustmentAngle) *
+            tipLength;
+        path.moveTo(tan.position.dx, tan.position.dy);
+        path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+        tipVector = _rotateVector(-tan.vector, -angleStart - adjustmentAngle) *
+            tipLength;
+        path.moveTo(tan.position.dx, tan.position.dy);
+        path.relativeLineTo(tipVector.dx, tipVector.dy);
+      }
+
+      path.moveTo(originalPosition.dx, originalPosition.dy);
+      return path;
     }
 
-    path.moveTo(originalPosition.dx, originalPosition.dy);
-    return path;
+    return null;
   }
 
   static Offset _rotateVector(Offset vector, double angle) => Offset(
