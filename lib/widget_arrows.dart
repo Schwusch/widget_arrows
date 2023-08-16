@@ -148,6 +148,8 @@ class _ArrowPainter extends CustomPainter {
         );
 
         final path = _createPath(arrow, widget);
+        if (path == null) return;
+
         final paint = Paint()
           ..color = widget.color
           ..style = PaintingStyle.stroke
@@ -160,12 +162,13 @@ class _ArrowPainter extends CustomPainter {
     }
   }
 
-  Path _createPath(Arrow arrow, ArrowElement widget) {
+  Path? _createPath(Arrow arrow, ArrowElement widget) {
     final path = Path()
       ..moveTo(arrow.sx, arrow.sy)
       ..quadraticBezierTo(arrow.cx, arrow.cy, arrow.ex, arrow.ey);
 
     final metrics = path.computeMetrics().toList();
+    if (metrics.isEmpty) return null;
 
     final lastPathMetric = metrics.last;
     final firstPathMetric = metrics.first;
