@@ -1,3 +1,6 @@
+## 0.6.0
+- Do not throw exception when no metrics are found, contribution from @HSCOGT 
+
 ## 0.5.2
 - Do not trigger an unnecessary redraw
 

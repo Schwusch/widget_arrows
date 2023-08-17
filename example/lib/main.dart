@@ -59,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     targetAnchor: Alignment.centerRight,
                     child: Text(
                       'Arrow here please',
-                      style: Theme.of(context).textTheme.headline4,
+                      style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ),
                 ),
