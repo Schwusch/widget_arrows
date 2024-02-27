@@ -151,7 +151,7 @@ class _ArrowPainter extends CustomPainter {
         if (path == null) return;
 
         final paint = Paint()
-          ..color = widget.color
+          ..color = widget.colors[targetId] ?? widget.color
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
@@ -270,6 +270,9 @@ class ArrowElement extends StatefulWidget {
   /// Arrow color
   final Color color;
 
+  /// Arrow color
+  final Map<String, Color> colors;
+
   /// Arrow width
   final double width;
 
@@ -321,6 +324,7 @@ class ArrowElement extends StatefulWidget {
     this.targetAnchor = Alignment.centerLeft,
     this.doubleSided = false,
     this.color = Colors.blue,
+    this.colors = const {},
     this.width = 3,
     this.tipLength = 15,
     this.tipAngleOutwards = pi * 0.2,
