@@ -151,15 +151,6 @@ class _ArrowPainter extends CustomPainter {
         // if (path == null) return;
 
         if (path != null) {
-          final paint = Paint()
-            ..color = widget.colors[targetId] ?? widget.color
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round
-            ..strokeWidth = widget.width;
-
-          canvas.drawPath(path, paint);
-
           if (widget.darkBackground) {
             final paintDarkBackground = Paint()
               ..color = Colors.black
@@ -170,6 +161,15 @@ class _ArrowPainter extends CustomPainter {
 
             canvas.drawPath(path, paintDarkBackground);
           }
+
+          final paint = Paint()
+            ..color = widget.colors[targetId] ?? widget.color
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..strokeWidth = widget.width;
+
+          canvas.drawPath(path, paint);
         }
       }
     }
