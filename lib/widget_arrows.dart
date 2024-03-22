@@ -150,15 +150,17 @@ class _ArrowPainter extends CustomPainter {
         final path = _createPath(arrow, widget);
         if (path == null) continue;
 
-        if (widget.darkBackground) {
-          final paintDarkBackground = Paint()
+        // Draw a background arrow, thicker than the original one so it acts as
+        // a border to the one drawn on top.
+        if (widget.enableBorder) {
+          final paintBorder = Paint()
             ..color = Colors.black
             ..style = PaintingStyle.stroke
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round
             ..strokeWidth = widget.width + 1;
 
-          canvas.drawPath(path, paintDarkBackground);
+          canvas.drawPath(path, paintBorder);
         }
 
         final paint = Paint()
@@ -321,8 +323,8 @@ class ArrowElement extends StatefulWidget {
   /// Whether to use straight lines at 45 degree angles.
   final bool straights;
 
-  /// Whether to enable dark background to increase visibility.
-  final bool darkBackground;
+  /// Whether to enable a border around the arrow to increase visibility.
+  final bool enableBorder;
 
   /// If arrow is not straight, which direction the arc should follow
   final ArcDirection arcDirection;
@@ -350,7 +352,7 @@ class ArrowElement extends StatefulWidget {
     this.padEnd = 0,
     this.flip = false,
     this.straights = true,
-    this.darkBackground = false,
+    this.enableBorder = false,
     this.arcDirection = ArcDirection.Auto,
   })  : assert(targetId == null || targetIds == null),
         super(key: key);
