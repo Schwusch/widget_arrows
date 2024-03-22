@@ -283,7 +283,8 @@ class ArrowElement extends StatefulWidget {
   /// Arrow color
   final Color color;
 
-  /// Arrow color
+  /// Arrow color based on the target id of the arrow, this will override [color]
+  /// if not null.
   final Map<String, Color> colors;
 
   /// Arrow width
