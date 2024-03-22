@@ -1,6 +1,6 @@
 name: widget_arrows
 description: Simply draw customizable arrows between any widgets in your app.
-version: 0.5.2
+version: 0.6.0
 homepage: https://github.com/Schwusch/widget_arrows
 
 environment:
