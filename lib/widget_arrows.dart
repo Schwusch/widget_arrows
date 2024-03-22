@@ -148,29 +148,27 @@ class _ArrowPainter extends CustomPainter {
         );
 
         final path = _createPath(arrow, widget);
-        // if (path == null) return;
+        if (path == null) continue;
 
-        if (path != null) {
-          if (widget.darkBackground) {
-            final paintDarkBackground = Paint()
-              ..color = Colors.black
-              ..style = PaintingStyle.stroke
-              ..strokeCap = StrokeCap.round
-              ..strokeJoin = StrokeJoin.round
-              ..strokeWidth = widget.width + 1;
-
-            canvas.drawPath(path, paintDarkBackground);
-          }
-
-          final paint = Paint()
-            ..color = widget.colors[targetId] ?? widget.color
+        if (widget.darkBackground) {
+          final paintDarkBackground = Paint()
+            ..color = Colors.black
             ..style = PaintingStyle.stroke
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round
-            ..strokeWidth = widget.width;
+            ..strokeWidth = widget.width + 1;
 
-          canvas.drawPath(path, paint);
+          canvas.drawPath(path, paintDarkBackground);
         }
+
+        final paint = Paint()
+          ..color = widget.colors[targetId] ?? widget.color
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = widget.width;
+
+        canvas.drawPath(path, paint);
       }
     }
   }
@@ -181,63 +179,58 @@ class _ArrowPainter extends CustomPainter {
       ..quadraticBezierTo(arrow.cx, arrow.cy, arrow.ex, arrow.ey);
 
     final metrics = path.computeMetrics().toList();
-    // if (metrics.isEmpty) return null;
+    if (metrics.isEmpty) return null;
 
-    if (metrics.isNotEmpty) {
-      final lastPathMetric = metrics.last;
-      final firstPathMetric = metrics.first;
+    final lastPathMetric = metrics.last;
+    final firstPathMetric = metrics.first;
 
-      var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length)!;
-      var adjustmentAngle = 0.0;
+    var tan = lastPathMetric.getTangentForOffset(lastPathMetric.length)!;
+    var adjustmentAngle = 0.0;
 
-      final tipLength = widget.tipLength;
-      final tipAngleStart = widget.tipAngleOutwards;
+    final tipLength = widget.tipLength;
+    final tipAngleStart = widget.tipAngleOutwards;
 
-      final angleStart = pi - tipAngleStart;
-      final originalPosition = tan.position;
+    final angleStart = pi - tipAngleStart;
+    final originalPosition = tan.position;
 
-      if (lastPathMetric.length > 10) {
-        final tanBefore =
-            lastPathMetric.getTangentForOffset(lastPathMetric.length - 5)!;
+    if (lastPathMetric.length > 10) {
+      final tanBefore =
+          lastPathMetric.getTangentForOffset(lastPathMetric.length - 5)!;
+      adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
+    }
+
+    Offset tipVector;
+
+    tipVector =
+        _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
+    path.moveTo(tan.position.dx, tan.position.dy);
+    path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+    tipVector =
+        _rotateVector(tan.vector, -angleStart - adjustmentAngle) * tipLength;
+    path.moveTo(tan.position.dx, tan.position.dy);
+    path.relativeLineTo(tipVector.dx, tipVector.dy);
+
+    if (widget.doubleSided) {
+      tan = firstPathMetric.getTangentForOffset(0)!;
+      if (firstPathMetric.length > 10) {
+        final tanBefore = firstPathMetric.getTangentForOffset(5)!;
         adjustmentAngle = _getAngleBetweenVectors(tan.vector, tanBefore.vector);
       }
 
-      Offset tipVector;
-
       tipVector =
-          _rotateVector(tan.vector, angleStart - adjustmentAngle) * tipLength;
+          _rotateVector(-tan.vector, angleStart - adjustmentAngle) * tipLength;
       path.moveTo(tan.position.dx, tan.position.dy);
       path.relativeLineTo(tipVector.dx, tipVector.dy);
 
       tipVector =
-          _rotateVector(tan.vector, -angleStart - adjustmentAngle) * tipLength;
+          _rotateVector(-tan.vector, -angleStart - adjustmentAngle) * tipLength;
       path.moveTo(tan.position.dx, tan.position.dy);
       path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-      if (widget.doubleSided) {
-        tan = firstPathMetric.getTangentForOffset(0)!;
-        if (firstPathMetric.length > 10) {
-          final tanBefore = firstPathMetric.getTangentForOffset(5)!;
-          adjustmentAngle =
-              _getAngleBetweenVectors(tan.vector, tanBefore.vector);
-        }
-
-        tipVector = _rotateVector(-tan.vector, angleStart - adjustmentAngle) *
-            tipLength;
-        path.moveTo(tan.position.dx, tan.position.dy);
-        path.relativeLineTo(tipVector.dx, tipVector.dy);
-
-        tipVector = _rotateVector(-tan.vector, -angleStart - adjustmentAngle) *
-            tipLength;
-        path.moveTo(tan.position.dx, tan.position.dy);
-        path.relativeLineTo(tipVector.dx, tipVector.dy);
-      }
-
-      path.moveTo(originalPosition.dx, originalPosition.dy);
-      return path;
     }
 
-    return null;
+    path.moveTo(originalPosition.dx, originalPosition.dy);
+    return path;
   }
 
   static Offset _rotateVector(Offset vector, double angle) => Offset(
