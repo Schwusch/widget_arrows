@@ -148,10 +148,23 @@ class _ArrowPainter extends CustomPainter {
         );
 
         final path = _createPath(arrow, widget);
-        if (path == null) return;
+        if (path == null) continue;
+
+        // Draw a background arrow, thicker than the original one so it acts as
+        // a border to the one drawn on top.
+        if (widget.enableBorder) {
+          final paintBorder = Paint()
+            ..color = Colors.black
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..strokeWidth = widget.width + 1;
+
+          canvas.drawPath(path, paintBorder);
+        }
 
         final paint = Paint()
-          ..color = widget.color
+          ..color = widget.colors[targetId] ?? widget.color
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
@@ -270,6 +283,10 @@ class ArrowElement extends StatefulWidget {
   /// Arrow color
   final Color color;
 
+  /// Arrow color based on the target id of the arrow, this will override [color]
+  /// if not null.
+  final Map<String, Color> colors;
+
   /// Arrow width
   final double width;
 
@@ -307,6 +324,9 @@ class ArrowElement extends StatefulWidget {
   /// Whether to use straight lines at 45 degree angles.
   final bool straights;
 
+  /// Whether to enable a border around the arrow to increase visibility.
+  final bool enableBorder;
+
   /// If arrow is not straight, which direction the arc should follow
   final ArcDirection arcDirection;
 
@@ -321,6 +341,7 @@ class ArrowElement extends StatefulWidget {
     this.targetAnchor = Alignment.centerLeft,
     this.doubleSided = false,
     this.color = Colors.blue,
+    this.colors = const {},
     this.width = 3,
     this.tipLength = 15,
     this.tipAngleOutwards = pi * 0.2,
@@ -332,6 +353,7 @@ class ArrowElement extends StatefulWidget {
     this.padEnd = 0,
     this.flip = false,
     this.straights = true,
+    this.enableBorder = false,
     this.arcDirection = ArcDirection.Auto,
   })  : assert(targetId == null || targetIds == null),
         super(key: key);
